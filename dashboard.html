@@ -944,12 +944,12 @@ function renderTT(){
     for(let p=0;p<PERIODS;p++){
       const subj=(tt[day]||[])[p]||'';
       const color=subjColor(subj);
-      // 배경색: 텍스트 색의 10% 투명도
       const bgColor=subj?color+'18':'transparent';
       const cell=document.createElement('div');
       cell.className=`pcell${day===today?' today-col':''}`;
       cell.style.borderColor=subj?color+'44':'';
       cell.style.background=subj?bgColor:'';
+      cell.style.opacity=subj?'1':'0.28';
       cell.innerHTML=`<div class="pnum">${p+1}교시</div><div class="psubj${subj?'':' empty'}" style="${subj?`color:${color};font-weight:900`:''}"> ${subj||'입력'}</div>`;
       cell.addEventListener('click',()=>editCell(cell,day,p));
       col.appendChild(cell);
