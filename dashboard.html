@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>우리집 대시보드</title>
+<style>
+  :root {
+    --bg: #f0f2f8;
+    --card: #ffffff;
+    --border: #e2e5ef;
+    --text1: #13172a;
+    --text2: #4b5270;
+    --text3: #9198b4;
+    --blue: #2563eb;
+    --sky: #0ea5e9;
+    --green: #10b981;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --purple: #7c3aed;
+    --r: 18px;
+    --r-sm: 10px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    background: var(--bg);
+    color: var(--text1);
+    min-height: 100vh;
+    padding: 20px 18px;
+    font-size: 16px;
+  }
+
+  /* ── 헤더 ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 18px;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .header .sub { font-size: 14px; color: var(--text3); margin-top: 3px; }
+  .clock-block { text-align: right; }
+  .clock {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 40px; font-weight: 900;
+    letter-spacing: -2px; line-height: 1;
+    color: var(--text1);
+  }
+  .date-str { font-size: 14px; color: var(--text3); margin-top: 4px; }
+
+  /* ── 카드 공통 ── */
+  .card {
+    background: var(--card);
+    border-radius: var(--r);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    margin-bottom: 14px;
+    padding: 14px 16px;
+  }
+  .card-label {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text3);
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 12px;
+  }
+  .card-label .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--blue); flex-shrink: 0;
+  }
+
+  /* ── 날씨 + 대기질 (가로 배치) ── */
+  .top-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  /* 날씨 카드 */
+  .weather-card {
+    background: linear-gradient(135deg, #1a3a6e 0%, #2563eb 55%, #38bdf8 100%);
+    color: white;
+    position: relative; overflow: hidden;
+  }
+  .weather-card .card-label { color: rgba(255,255,255,0.55); }
+  .weather-card .card-label .dot { background: rgba(255,255,255,0.7); }
+  .weather-card::after {
+    content:''; position:absolute; top:-20px; right:-20px;
+    width:100px; height:100px; border-radius:50%;
+    background:rgba(255,255,255,0.06);
+  }
+  .w-main { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .w-icon { font-size:36px; line-height:1; }
+  .w-temp {
+    font-family:'DM Sans',sans-serif;
+    font-size:40px; font-weight:900;
+    letter-spacing:-2px; line-height:1; color:white;
+  }
+  .w-temp sup { font-size:18px; font-weight:400; opacity:.75; vertical-align:super; }
+  .w-desc { font-size:14px; font-weight:600; opacity:.9; margin-bottom:8px; }
+  .w-pills { display:flex; gap:6px; flex-wrap:wrap; }
+  .w-pill {
+    font-size:12px; opacity:.85;
+    background:rgba(255,255,255,0.15);
+    padding:4px 9px; border-radius:20px;
+    display:flex; align-items:center; gap:4px;
+  }
+  .w-forecast {
+    display:flex; gap:6px;
+    margin-top:10px; padding-top:10px;
+    border-top:1px solid rgba(255,255,255,0.18);
+  }
+  .f-item { flex:1; text-align:center; }
+  .f-item .ft { font-size:10px; opacity:.6; margin-bottom:2px; }
+  .f-item .fi { font-size:16px; }
+  .f-item .fv { font-size:13px; font-weight:700; }
+
+  /* 대기질 카드 */
+  .air-grade { font-size:26px; font-weight:900; margin-bottom:2px; letter-spacing:-0.5px; }
+  .air-bar { height:5px; background:var(--border); border-radius:10px; overflow:hidden; }
+  .air-fill { height:100%; border-radius:10px; transition:width .8s ease; }
+  .air-tip { margin-top:8px; padding:7px 12px; border-radius:var(--r-sm); font-size:13px; font-weight:500; line-height:1.4; }
+  .air-grade.best   { color:#3b82f6; }
+  .air-grade.good2  { color:#10b981; }
+  .air-grade.fine   { color:#22c55e; }
+  .air-grade.normal { color:#f59e0b; }
+  .air-grade.bad    { color:#f97316; }
+  .air-grade.worse  { color:#ef4444; }
+  .air-grade.worst  { color:#b91c1c; }
+  .air-grade.hazard { color:#1f2937; }
+
+  .air-fill.best   { background:#3b82f6; }
+  .air-fill.good2  { background:#10b981; }
+  .air-fill.fine   { background:#22c55e; }
+  .air-fill.normal { background:#f59e0b; }
+  .air-fill.bad    { background:#f97316; }
+  .air-fill.worse  { background:#ef4444; }
+  .air-fill.worst  { background:#b91c1c; }
+  .air-fill.hazard { background:#1f2937; }
+
+  .air-tip.best   { background:#eff6ff; color:#1e40af; }
+  .air-tip.good2  { background:#ecfdf5; color:#065f46; }
+  .air-tip.fine   { background:#f0fdf4; color:#14532d; }
+  .air-tip.normal { background:#fffbeb; color:#92400e; }
+  .air-tip.bad    { background:#fff7ed; color:#c2410c; }
+  .air-tip.worse  { background:#fef2f2; color:#991b1b; }
+  .air-tip.worst  { background:#fef2f2; color:#7f1d1d; }
+  .air-tip.hazard { background:#111827; color:#f9fafb; }
+
+  /* ── 시간표 ── */
+  .tt-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .today-tag {
+    font-size:12px; font-weight:700;
+    padding:4px 10px; border-radius:20px;
+    background:#eff6ff; color:var(--blue);
+    white-space:nowrap;
+  }
+  .tt-hint { font-size:12px; color:var(--text3); margin-bottom:10px; }
+  .tt-grid {
+    display:grid; grid-template-columns:repeat(5,1fr); gap:4px;
+    width:100%; overflow:hidden;
+  }
+  .day-hd {
+    text-align:center; font-size:13px; font-weight:700;
+    padding:7px 2px; border-radius:var(--r-sm);
+    background:var(--bg); color:var(--text2);
+    margin-bottom:4px; overflow:hidden;
+  }
+  .day-hd.today { background:var(--blue); color:white; }
+  .pcell {
+    display:flex; flex-direction:column; align-items:center;
+    padding:5px 2px; border-radius:8px;
+    border:1.5px solid var(--border);
+    margin-bottom:4px; cursor:pointer;
+    transition:all .15s; min-height:48px; justify-content:center;
+    overflow:hidden; width:100%;
+  }
+  .pcell:hover { border-color:var(--blue); box-shadow:0 0 0 3px #dbeafe; }
+  .pcell.today-col { background:#f0f7ff; border-color:#bfdbfe; }
+  .pcell.editing { border-color:var(--blue); background:#f0f7ff; }
+  .pnum { font-size:9px; color:var(--text3); font-weight:600; margin-bottom:2px; }
+  .psubj {
+    font-size:11px; font-weight:800; text-align:center;
+    line-height:1.2; color:var(--text1);
+    word-break:break-all; overflow-wrap:break-word;
+    max-width:100%; padding:0 2px;
+  }
+  .psubj.empty { color:var(--text3); font-weight:400; font-size:10px; }
+  .pinput {
+    width:100%; border:none; outline:none;
+    font-size:10px; font-weight:800; text-align:center;
+    background:transparent; font-family:-apple-system,sans-serif;
+    color:var(--text1);
+  }
+  /* 과목 색상 - JS로 동적 처리 */
+  .save-btn {
+    padding:6px 14px; border-radius:8px; border:1px solid var(--border);
+    background:var(--bg); color:var(--text2);
+    font-size:13px; font-weight:600; cursor:pointer;
+    font-family:'Noto Sans KR',sans-serif; transition:all .15s;
+  }
+  .save-btn:hover { background:var(--border); }
+
+  /* ── 하이클래스 ── */
+  .hc-toprow { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .hc-meta { display:flex; align-items:center; gap:10px; }
+  .hc-time { font-size:13px; color:var(--text3); }
+  .hc-badge {
+    display:flex; align-items:center; gap:5px;
+    font-size:12px; font-weight:700; color:var(--blue);
+    background:#eff6ff; padding:4px 10px; border-radius:20px;
+    white-space:nowrap;
+  }
+  .live-dot {
+    width:7px; height:7px; border-radius:50%; background:var(--green);
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+  .hc-posts { display:flex; flex-direction:column; gap:8px; }
+  .hc-post {
+    background:var(--bg); border-radius:var(--r-sm);
+    padding:12px 16px;
+  }
+  .hc-post-date { font-size:13px; color:var(--text3); font-weight:500; margin-bottom:8px; }
+  .hc-post-body {
+    font-size:16px; line-height:2; color:var(--text1);
+    white-space:pre-wrap; word-break:break-word;
+  }
+  .hc-empty {
+    background:var(--bg); border-radius:var(--r-sm);
+    padding:28px 20px; text-align:center;
+    font-size:15px; color:var(--text3);
+  }
+  .hc-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .hc-textarea {
+    width:100%; background:var(--bg);
+    border:1.5px solid var(--blue);
+    border-radius:var(--r-sm); padding:16px 18px;
+    font-size:16px; font-family:'Noto Sans KR',sans-serif;
+    line-height:2; color:var(--text1);
+    resize:vertical; min-height:120px; outline:none;
+  }
+
+  /* 버튼 공통 */
+  .btn {
+    padding:9px 18px; border-radius:9px; border:none;
+    font-size:14px; font-weight:700; cursor:pointer;
+    font-family:'Noto Sans KR',sans-serif; transition:all .15s;
+  }
+  .btn-primary  { background:var(--blue); color:white; }
+  .btn-primary:hover { background:#1d4ed8; }
+  .btn-outline  { background:none; border:1.5px solid var(--blue); color:var(--blue); }
+  .btn-outline:hover  { background:#eff6ff; }
+  .btn-ghost { background:none; border:1.5px solid var(--border); color:var(--text2); }
+  .btn-ghost:hover { background:var(--bg); }
+
+  /* 새로고침 버튼 */
+  .rbtn {
+    background:none; border:none; cursor:pointer;
+    font-size:16px; color:var(--text3); padding:3px 6px;
+    border-radius:6px; transition:all .15s; line-height:1;
+  }
+  .rbtn:hover { background:var(--border); }
+  .rbtn.spin { animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* API 키 설정 바 */
+  .api-bar {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:var(--r-sm); padding:12px 16px;
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.05);
+  }
+  .api-bar label { font-size:13px; color:var(--text2); font-weight:600; white-space:nowrap; }
+  .api-bar input {
+    flex:1; border:1.5px solid var(--border); border-radius:7px;
+    padding:7px 12px; font-size:13px; outline:none;
+    font-family:monospace; background:var(--bg);
+  }
+  .api-bar input:focus { border-color:var(--blue); }
+
+  .ai-summary {
+    font-size:15px; font-weight:700; color:var(--blue);
+    background:#eff6ff; padding:8px 12px;
+    border-radius:var(--r-sm); margin-bottom:10px;
+    border-left:4px solid var(--blue);
+  }
+  .ai-section { margin-bottom:10px; }
+  .ai-section-title {
+    font-size:14px; font-weight:700; color:var(--text1);
+    margin-bottom:5px;
+  }
+  .ai-list {
+    list-style:none; display:flex; flex-direction:column; gap:3px;
+  }
+  .ai-list li {
+    font-size:14px; line-height:1.5; color:var(--text2);
+    padding-left:14px; position:relative;
+  }
+  .ai-list li::before {
+    content:'•'; position:absolute; left:0;
+    color:var(--blue); font-weight:700;
+  }
+  .raw-toggle {
+    margin-top:10px; padding-top:10px;
+    border-top:1px solid var(--border);
+    cursor:pointer;
+  }
+  .raw-toggle span {
+    font-size:12px; color:var(--text3); font-weight:600;
+    user-select:none;
+  }
+  .raw-toggle span:hover { color:var(--blue); }
+  .raw-content {
+    margin-top:8px; font-size:13px; line-height:1.7;
+    color:var(--text2); white-space:pre-wrap; word-break:break-word;
+  }
+
+  .ldot {
+    width:10px; height:10px; border-radius:50%;
+    background:var(--blue); opacity:.3;
+    animation:ldot 1s ease-in-out infinite;
+  }
+  @keyframes ldot {
+    0%,100%{ opacity:.3; transform:scale(1); }
+    50%{ opacity:1; transform:scale(1.3); }
+  }
+
+  .weather-air-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  /* PC 전용 폰트 크기 */
+  @media(min-width:768px){
+    body { font-size: 18px; padding: 24px 28px; }
+    .clock { font-size: 52px; }
+    .header h1 { font-size: 28px; }
+    .header .sub { font-size: 16px; }
+    .date-str { font-size: 16px; }
+    .card-label { font-size: 13px; }
+    .w-temp { font-size: 48px !important; }
+    .w-icon { font-size: 50px !important; }
+    .air-grade { font-size: 32px !important; }
+    .tt-hint { font-size: 15px; }
+    .day-hd { font-size: 16px; padding: 10px 4px; }
+    .pcell { min-height: 64px; padding: 8px 4px; }
+    .pnum { font-size: 12px; }
+    .psubj { font-size: 15px; }
+    .hc-post-date { font-size: 16px; }
+    .hc-post-body { font-size: 17px; line-height: 2; }
+    .ai-summary { font-size: 17px; }
+    .ai-section-title { font-size: 16px; }
+    .ai-list li { font-size: 16px; }
+    .btn { font-size: 15px; padding: 10px 20px; }
+    .today-tag { font-size: 14px; }
+    .save-btn { font-size: 14px; }
+  }
+    .weather-air-grid {
+      grid-template-columns: 1fr;
+    }
+    .top-row { grid-template-columns:1fr; }
+    .clock { font-size:30px; }
+    .w-temp { font-size:44px; }
+    .tt-grid { gap:5px; }
+    .psubj { font-size:12px; }
+    .day-hd { font-size:13px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 로딩 스크린 -->
+<div id="loadingScreen" style="
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:#f0f2f8; z-index:9999;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:20px;
+">
+  <div style="font-size:48px">🏠</div>
+  <div style="font-size:18px; font-weight:700; color:#13172a">우리집 대시보드</div>
+  <div style="display:flex; gap:8px; align-items:center">
+    <div class="ldot"></div>
+    <div class="ldot" style="animation-delay:.2s"></div>
+    <div class="ldot" style="animation-delay:.4s"></div>
+  </div>
+  <div id="loadingMsg" style="font-size:14px; color:#9198b4">데이터 불러오는 중...</div>
+</div>
+
+<!-- 헤더 -->
+<div class="header">
+  <div>
+    <h1>🏠 우리집 대시보드</h1>
+    <div class="sub">송파구 · 초등 1학년</div>
+  </div>
+  <div class="clock-block">
+    <div class="clock" id="clock">00:00</div>
+    <div class="date-str" id="dateStr">--</div>
+  </div>
+</div>
+
+<!-- API 키 설정 -->
+<div class="api-bar" id="apiBar">
+  <label>🔑 API 키</label>
+  <input type="password" id="apiInput" placeholder="공공데이터포털 API 키 입력 후 저장" />
+  <button class="btn btn-primary" onclick="saveApiKey()">저장</button>
+  <button class="btn btn-ghost" onclick="hideApiBar()">닫기</button>
+</div>
+
+  <!-- 날씨 + 대기질 통합 카드 -->
+<div class="card" style="margin-bottom:14px;padding:12px 16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block"></span>
+      <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3)">날씨 · 대기질 · 송파구</span>
+    </div>
+    <div style="display:flex;gap:4px">
+      <button class="rbtn" id="wBtn" onclick="if(isLocal)loadWeather()" title="새로고침 (로컬만)">↻</button>
+      <button class="rbtn" id="aBtn" onclick="if(isLocal)loadAir()" title="새로고침 (로컬만)">↻</button>
+    </div>
+  </div>
+  <div class="weather-air-grid">
+    <div id="weatherContent" style="background:linear-gradient(135deg,#1a3a6e,#2563eb 55%,#38bdf8);border-radius:12px;padding:14px;color:white;min-width:0">
+      <div style="color:rgba(255,255,255,.6);font-size:14px">불러오는 중...</div>
+    </div>
+    <div id="airContent" style="background:var(--bg);border-radius:12px;padding:14px;min-width:0">
+      <div style="font-size:14px;color:var(--text3)">불러오는 중...</div>
+    </div>
+  </div>
+</div>
+
+<!-- 오늘/내일 일정 배너 -->
+<div id="eventBanner" style="margin-bottom:14px;display:none"></div>
+
+<!-- 시간표 -->
+<div class="card" style="overflow:hidden">
+  <div class="tt-header">
+    <div class="card-label" style="margin-bottom:0">
+      <span class="dot" style="background:var(--purple)"></span>주간 시간표 · 1학년
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="today-tag" id="todayTag">오늘: --</span>
+      <button class="save-btn" onclick="saveTimetable(event)">저장</button>
+    </div>
+  </div>
+  <div class="tt-hint">셀을 클릭해서 과목을 입력하세요</div>
+  <div class="tt-grid" id="ttGrid"></div>
+</div>
+
+<!-- 하이클래스 -->
+<div class="card">
+  <div class="hc-toprow">
+    <div class="card-label" style="margin-bottom:0">
+      <span class="dot" style="background:var(--orange)"></span>하이클래스 알림장
+    </div>
+    <div class="hc-meta">
+      <span class="hc-time" id="hcTime">미업데이트</span>
+      <div class="hc-badge"><span class="live-dot"></span>자동수집</div>
+      <button class="rbtn" onclick="loadHiclass()">↻</button>
+    </div>
+  </div>
+  <div id="hcDisplay" style="margin-top:14px"></div>
+  <div class="hc-actions" id="hcActions">
+    <button class="btn btn-outline" onclick="openHiclass()">🔗 하이클래스 열기</button>
+    <button class="btn btn-ghost" onclick="toggleEdit()">✏️ 수동 입력</button>
+    <button class="btn btn-ghost" onclick="clearHc()">🗑 지우기</button>
+  </div>
+</div>
+
+<script>
+// ── 상수 ──
+const NX=62, NY=123;
+const DAYS=['월','화','수','목','금'];
+const PERIODS=5;
+const DNAMES=['일','월','화','수','목','금','토'];
+
+// ── 시계 ──
+function tick(){
+  const n=new Date();
+  const p=v=>String(v).padStart(2,'0');
+  document.getElementById('clock').textContent=`${p(n.getHours())}:${p(n.getMinutes())}`;
+  document.getElementById('dateStr').textContent=`${n.getMonth()+1}월 ${n.getDate()}일 ${DNAMES[n.getDay()]}요일`;
+  const di=n.getDay();
+  const tag=document.getElementById('todayTag');
+  if(tag) tag.textContent=`오늘: ${di>=1&&di<=5?DAYS[di-1]+('요일'):'주말'}`;
+}
+setInterval(tick,1000); tick();
+
+// ── API 키 (고정) ──
+// API 키는 server.py에서만 사용 (대시보드는 Gist/로컬서버에서 데이터 읽기만 함)
+const getKey=()=>'';
+function saveApiKey(){ hideApiBar(); }
+function hideApiBar(){ document.getElementById('apiBar').style.display='none'; }
+
+window.addEventListener('load',()=>{
+  hideApiBar();
+  const msg = document.getElementById('loadingMsg');
+
+  // 단계별 로딩 메시지
+  const steps = ['날씨 정보 불러오는 중...', '미세먼지 확인 중...', '시간표 불러오는 중...', '알림장 확인 중...'];
+  let si = 0;
+  const msgInterval = setInterval(()=>{ if(msg && si < steps.length) msg.textContent = steps[si++]; }, 600);
+
+  // 병렬 로드 후 로딩 스크린 제거
+  Promise.all([loadWeather(), loadAir(), loadTimetable(), loadHiclass(), loadEvents()])
+    .finally(()=>{
+      clearInterval(msgInterval);
+      const screen = document.getElementById('loadingScreen');
+      if(screen){
+        screen.style.transition = 'opacity .4s';
+        screen.style.opacity = '0';
+        setTimeout(()=> screen.remove(), 400);
+      }
+    });
+});
+
+// ── 날씨 ──
+function getBaseDT(){
+  const n=new Date(); const p=v=>String(v).padStart(2,'0');
+  const bases=[2,5,8,11,14,17,20,23]; let bh=bases[0];
+  for(const b of bases){ if(n.getHours()>=b+1) bh=b; }
+  const d=n.getHours()<2?new Date(n-86400000):n;
+  return {
+    date:`${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`,
+    time:`${p(bh)}00`
+  };
+}
+async function loadWeather(){
+  const btn=document.getElementById('wBtn'); btn.classList.add('spin');
+  try{
+    let data;
+    if(isLocal) {
+      const r = await fetch(`${API}/api/weather`);
+      data = await r.json();
+    } else {
+      const d = await fetchData('', 'weather.json');
+      data = d.weather || d;
+    }
+    if(data && data.items && data.items.length > 0){
+      renderWeather(data);
+    } else {
+      document.getElementById('weatherContent').innerHTML='<div style="color:rgba(255,255,255,.7);font-size:14px">⏳ 날씨 수집 중...</div>';
+    }
+  }catch(e){
+    document.getElementById('weatherContent').innerHTML='<div style="color:rgba(255,255,255,.7);font-size:14px">⚠️ 날씨 정보를 불러올 수 없습니다</div>';
+  }finally{ btn.classList.remove('spin'); }
+}
+
+// ── 일출/일몰 계산 (NOAA 알고리즘, 오차 ~1분) ──
+function calcSunriseSunset(lat, lng, date) {
+  const p = Math.PI / 180;
+  const r = 180 / Math.PI;
+
+  const JD = (date) => {
+    const y=date.getFullYear(), m=date.getMonth()+1, d=date.getDate();
+    return 367*y - Math.floor(7*(y+Math.floor((m+9)/12))/4) + Math.floor(275*m/9) + d + 1721013.5;
+  };
+
+  const jd = JD(date);
+  const n = jd - 2451545.0;
+  const L = (280.46 + 0.9856474*n) % 360;
+  const g = (357.528 + 0.9856003*n) % 360;
+  const lam = L + 1.915*Math.sin(g*p) + 0.02*Math.sin(2*g*p);
+  const eps = 23.439 - 0.0000004*n;
+  const sinDec = Math.sin(eps*p)*Math.sin(lam*p);
+  const dec = Math.asin(sinDec)*r;
+
+  const cosH = (Math.cos(90.833*p) - Math.sin(lat*p)*Math.sin(dec*p)) / (Math.cos(lat*p)*Math.cos(dec*p));
+  if(cosH > 1) return {sunrise:'없음',sunset:'없음'};
+  if(cosH < -1) return {sunrise:'종일',sunset:'종일'};
+
+  const H = Math.acos(cosH)*r;
+  const RA = Math.atan2(Math.cos(eps*p)*Math.sin(lam*p), Math.cos(lam*p))*r/15;
+  const RA2 = ((RA % 24) + 24) % 24;
+
+  const GMST = 6.697375 + 0.0657098242*n + 12;
+  const LMST = ((GMST + lng/15) % 24 + 24) % 24;
+  const transit = ((RA2 - LMST + 24) % 24);
+
+  const riseUTC = transit - H/15;
+  const setUTC  = transit + H/15;
+
+  // UTC+9 (KST)
+  const toKST = (utc) => {
+    const kst = ((utc + 9) % 24 + 24) % 24;
+    const hh = Math.floor(kst);
+    const mm = Math.round((kst - hh) * 60);
+    return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+  };
+
+  return { sunrise: toKST(riseUTC), sunset: toKST(setUTC) };
+}
+
+function renderWeather(data){
+  const items=Array.isArray(data)?data:data.items;
+  const sunrise=data.sunrise||'--:--';
+  const sunset=data.sunset||'--:--';
+  const n=new Date(); const p=v=>String(v).padStart(2,'0');
+  const today=`${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}`;
+  const h=n.getHours();
+  const byCat={};
+  items.forEach(i=>{ if(!byCat[i.category]) byCat[i.category]=[]; byCat[i.category].push(i); });
+  function closest(cat){
+    const arr=(byCat[cat]||[]).filter(i=>i.fcstDate===today);
+    if(!arr.length) return null;
+    const f=arr.filter(i=>parseInt(i.fcstTime)>=h*100);
+    return f.length?f[0]:arr[arr.length-1];
+  }
+  const tmp=closest('TMP'),sky=closest('SKY'),pty=closest('PTY'),pop=closest('POP'),reh=closest('REH');
+  const temp=tmp?.fcstValue??'--';
+  const sv=parseInt(sky?.fcstValue??1),pv=parseInt(pty?.fcstValue??0);
+  const popV=pop?.fcstValue??'--',rehV=reh?.fcstValue??'--';
+  const tmxArr=(byCat['TMX']||[]).filter(i=>i.fcstDate===today);
+  const tmnArr=(byCat['TMN']||[]).filter(i=>i.fcstDate===today);
+  const tmpAll=(byCat['TMP']||[]).filter(i=>i.fcstDate===today).map(i=>parseFloat(i.fcstValue));
+  // Open-Meteo에서 받은 값 우선 사용, 없으면 TMP에서 계산
+  const tMax = data.tMax ?? (tmxArr.length?Math.round(parseFloat(tmxArr[0].fcstValue)):(tmpAll.length?Math.round(Math.max(...tmpAll)):'--'));
+  const tMin = data.tMin ?? (tmnArr.length?Math.round(parseFloat(tmnArr[0].fcstValue)):(tmpAll.length?Math.round(Math.min(...tmpAll)):'--'));
+  function wi(s,p){
+    if(p===1)return{i:'🌧',t:'비'}; if(p===2)return{i:'🌨',t:'비/눈'};
+    if(p===3)return{i:'❄️',t:'눈'}; if(p===4)return{i:'🌦',t:'소나기'};
+    if(s===1)return{i:'☀️',t:'맑음'}; if(s===3)return{i:'⛅',t:'구름많음'};
+    if(s===4)return{i:'☁️',t:'흐림'}; return{i:'🌤',t:'맑음'};
+  }
+  const {i:icon,t:desc}=wi(sv,pv);
+  document.getElementById('weatherContent').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <span style="font-size:44px;line-height:1">${icon}</span>
+      <div>
+        <div style="font-size:38px;font-weight:900;letter-spacing:-2px;color:white;line-height:1">${temp}°</div>
+        <div style="font-size:14px;font-weight:500;opacity:.85;margin-top:3px">${desc}</div>
+      </div>
+      <div style="margin-left:auto;text-align:right;line-height:1.6">
+        <div style="font-size:14px;color:#ff8787">↑ ${tMax}°</div>
+        <div style="font-size:14px;color:#74c0fc">↓ ${tMin}°</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
+      <div style="background:rgba(255,255,255,.13);border-radius:10px;padding:8px 4px;text-align:center">
+        <div style="font-size:18px;margin-bottom:4px">💧</div>
+        <div style="font-size:14px;font-weight:700;color:white">${rehV}%</div>
+        <div style="font-size:10px;opacity:.6;margin-top:2px">습도</div>
+      </div>
+      <div style="background:rgba(255,255,255,.13);border-radius:10px;padding:8px 4px;text-align:center">
+        <div style="font-size:18px;margin-bottom:4px">🌂</div>
+        <div style="font-size:14px;font-weight:700;color:white">${popV}%</div>
+        <div style="font-size:10px;opacity:.6;margin-top:2px">강수</div>
+      </div>
+      <div style="background:rgba(255,255,255,.13);border-radius:10px;padding:8px 4px;text-align:center">
+        <div style="font-size:18px;margin-bottom:4px">🌅</div>
+        <div style="font-size:14px;font-weight:700;color:white">${sunrise}</div>
+        <div style="font-size:10px;opacity:.6;margin-top:2px">일출</div>
+      </div>
+      <div style="background:rgba(255,255,255,.13);border-radius:10px;padding:8px 4px;text-align:center">
+        <div style="font-size:18px;margin-bottom:4px">🌇</div>
+        <div style="font-size:14px;font-weight:700;color:white">${sunset}</div>
+        <div style="font-size:10px;opacity:.6;margin-top:2px">일몰</div>
+      </div>
+    </div>
+  `;
+}
+
+// ── 미세먼지 ──
+async function loadAir(){
+  const btn=document.getElementById('aBtn'); btn.classList.add('spin');
+  try{
+    let item;
+    if(isLocal) {
+      const r = await fetch(`${API}/api/air`);
+      item = await r.json();
+    } else {
+      const d = await fetchData('', 'weather.json');
+      item = d.air || d;
+    }
+    if(item && item.pm10Value){
+      renderAir(item);
+    } else {
+      document.getElementById('airContent').innerHTML='<div style="font-size:13px;color:var(--text3)">⏳ 미세먼지 수집 중...</div>';
+    }
+  }catch(e){
+    document.getElementById('airContent').innerHTML='<div style="font-size:13px;color:var(--red)">⚠️ 미세먼지 정보를 불러올 수 없습니다</div>';
+  }finally{ btn.classList.remove('spin'); }
+}
+function renderAir(item){
+  const pm10=parseInt(item.pm10Value)||0, pm25=parseInt(item.pm25Value)||0;
+
+  const gradeColors = [
+    {c:'#3b82f6',l:'최고'},{c:'#10b981',l:'좋음'},{c:'#22c55e',l:'양호'},{c:'#f59e0b',l:'보통'},
+    {c:'#f97316',l:'나쁨'},{c:'#ef4444',l:'상당히\n나쁨'},{c:'#b91c1c',l:'매우\n나쁨'},{c:'#1f2937',l:'최악'}
+  ];
+
+  function getGrade(pm10, pm25) {
+    if(pm10<=10)  return {t:'최고',     c:'best',   tip:'🌟 공기가 매우 깨끗해요!'};
+    if(pm10<=22)  return {t:'좋음',     c:'good2',  tip:'😊 야외 활동하기 아주 좋아요!'};
+    if(pm10<=35)  return {t:'양호',     c:'fine',   tip:'🙂 대체로 쾌적한 날이에요'};
+    if(pm10<=45)  return {t:'보통',     c:'normal', tip:'😐 민감한 분은 주의하세요'};
+    if(pm10<=75)  return {t:'나쁨',     c:'bad',    tip:'😷 외출 시 마스크를 착용하세요'};
+    if(pm10<=100) return {t:'상당히나쁨', c:'worse', tip:'🚫 실외 활동을 자제하세요'};
+    if(pm10<=150) return {t:'매우나쁨',  c:'worst',  tip:'⛔ 외출하지 마세요'};
+    return               {t:'최악',     c:'hazard', tip:'☠️ 매우 위험! 절대 외출 금지'};
+  }
+
+  function getGrade25(v) {
+    if(v<=5)  return {t:'최고',     c:'best'};
+    if(v<=9)  return {t:'좋음',     c:'good2'};
+    if(v<=12) return {t:'양호',     c:'fine'};
+    if(v<=15) return {t:'보통',     c:'normal'};
+    if(v<=37) return {t:'나쁨',     c:'bad'};
+    if(v<=50) return {t:'상당히나쁨', c:'worse'};
+    if(v<=75) return {t:'매우나쁨',  c:'worst'};
+    return          {t:'최악',     c:'hazard'};
+  }
+
+  const g10 = getGrade(pm10);
+  const g25 = getGrade25(pm25);
+
+  // 8단계 색 바 (PM10 기준 위치 표시)
+  const pm10Idx = ['best','good2','fine','normal','bad','worse','worst','hazard'].indexOf(g10.c);
+  const pm25Idx = ['best','good2','fine','normal','bad','worse','worst','hazard'].indexOf(g25.c);
+
+  const colorBar = gradeColors.map((g,i) => `
+    <div style="flex:1;position:relative">
+      <div style="height:8px;background:${g.c};border-radius:${i===0?'6px 0 0 6px':i===7?'0 6px 6px 0':'0'}"></div>
+      ${i===pm10Idx?`<div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:3px;height:16px;background:#1f2937;border-radius:2px"></div>`:''}
+      ${i===pm25Idx?`<div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:3px;height:16px;background:white;border:1px solid #666;border-radius:2px"></div>`:''}
+    </div>
+  `).join('');
+
+  const colorLabels = gradeColors.map(g=>`
+    <div style="flex:1;text-align:center;font-size:8px;color:var(--text3);margin-top:2px;line-height:1.2">${g.l}</div>
+  `).join('');
+
+  // 최악 tip 기준
+  const worstTip = [g10, g25].sort((a,b)=>['best','good2','fine','normal','bad','worse','worst','hazard'].indexOf(b.c)-['best','good2','fine','normal','bad','worse','worst','hazard'].indexOf(a.c))[0];
+
+  document.getElementById('airContent').innerHTML=`
+    <div style="margin-bottom:10px">
+      <div style="display:flex">${colorBar}</div>
+      <div style="display:flex">${colorLabels}</div>
+      <div style="display:flex;gap:10px;margin-top:4px;font-size:10px;color:var(--text3)">
+        <span>▐ PM10 위치</span><span style="border:1px solid #666;display:inline-block;width:10px;height:10px;border-radius:2px;background:white;vertical-align:middle"></span><span>PM2.5 위치</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1;background:var(--card);border-radius:10px;padding:10px 12px;border:1.5px solid var(--border)">
+        <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:4px">미세먼지 PM10</div>
+        <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:6px">
+          <span style="font-size:26px;font-weight:900;color:${gradeColors[pm10Idx].c}">${pm10}</span>
+          <span style="font-size:11px;color:var(--text3)">㎍/㎥</span>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:${gradeColors[pm10Idx].c}">${g10.t}</div>
+      </div>
+      <div style="flex:1;background:var(--card);border-radius:10px;padding:10px 12px;border:1.5px solid var(--border)">
+        <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:4px">초미세먼지 PM2.5</div>
+        <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:6px">
+          <span style="font-size:26px;font-weight:900;color:${gradeColors[pm25Idx].c}">${pm25}</span>
+          <span style="font-size:11px;color:var(--text3)">㎍/㎥</span>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:${gradeColors[pm25Idx].c}">${g25.t}</div>
+      </div>
+    </div>
+    <div class="air-tip ${worstTip.c}" style="padding:7px 10px;font-size:12px;margin-top:8px">${getGrade(pm10).tip}</div>
+  `;
+}
+
+// ── API 주소 (현재 접속 호스트 기준 - PC/모바일 모두 작동) ──
+const API = `http://${location.hostname}:8081`;
+
+// GitHub Gist URL (PC 꺼졌을 때 폴백)
+const GIST_RAW = 'https://gist.githubusercontent.com/kim80091/709af086af1b02ad0ee20bb1f93b33a6/raw';
+const isLocal  = location.hostname === 'localhost' || location.hostname.startsWith('192.168');
+
+// 데이터 읽기 - 로컬 우선, 실패 시 Gist 폴백
+async function fetchData(localPath, gistFile) {
+  if(isLocal) {
+    try {
+      const r = await fetch(localPath);
+      if(r.ok) return await r.json();
+    } catch(e) {}
+  }
+  // 외부 접속이거나 로컬 실패 시 Gist에서 읽기
+  const r = await fetch(`${GIST_RAW}/${gistFile}?t=${Date.now()}`);
+  return await r.json();
+}
+
+// ── 오늘/내일 일정 배너 ──
+async function loadEvents() {
+  try {
+    let events;
+    if(isLocal) {
+      const r = await fetch('./events.json?t=' + Date.now());
+      events = await r.json();
+    } else {
+      const gist = await fetchData('', 'data.json');
+      events = gist.events || [];
+    }
+    renderEventBanner(events);
+  } catch(e) {}
+}
+
+function renderEventBanner(events) {
+  const now = new Date();
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate()+1);
+  const dayAfter = new Date(now); dayAfter.setDate(now.getDate()+2);
+
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const todayStr     = fmt(now);
+  const tomorrowStr  = fmt(tomorrow);
+  const dayAfterStr  = fmt(dayAfter);
+
+  const lunarMap = {
+    'lunar-05-05': '2026-06-19', // 2026년 단오 (음력 5.5)
+    'lunar-07-07': '2026-08-20', // 2026년 칠석 (음력 7.7)
+  };
+
+  const typeStyle = {
+    holiday: { bg:'#fff1f0', border:'#ffa39e', icon:'🎌', label:'공휴일' },
+    school:  { bg:'#e6f4ff', border:'#91caff', icon:'🏫', label:'학교일정' },
+    season:  { bg:'#f6ffed', border:'#b7eb8f', icon:'🌿', label:'절기/기념일' },
+    family:  { bg:'#fff0f6', border:'#ffadd2', icon:'🎂', label:'가족생일' },
+  };
+
+  const todayEvents    = [];
+  const tomorrowEvents = [];
+  const dayAfterEvents = [];
+
+  events.forEach(ev => {
+    const date = lunarMap[ev.date] || ev.date;
+    if(date === todayStr)    todayEvents.push(ev);
+    if(date === tomorrowStr) tomorrowEvents.push(ev);
+    if(date === dayAfterStr) dayAfterEvents.push(ev);
+  });
+
+  if(!todayEvents.length && !tomorrowEvents.length) {
+    // 이벤트 없어도 배너 표시
+  }
+
+  const renderItems = (items, dayLabel, dayColor, dateStr) => {
+    const d = new Date(dateStr);
+    const dayNames = ['일','월','화','수','목','금','토'];
+    const dateLabel = `${d.getMonth()+1}월 ${d.getDate()}일 (${dayNames[d.getDay()]})`;
+    return `
+      <div style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:800;color:${dayColor};background:${dayColor}18;padding:3px 10px;border-radius:10px">${dayLabel}</span>
+          <span style="font-size:12px;color:var(--text3)">${dateLabel}</span>
+        </div>
+        ${items.length ? items.map(ev => {
+          const s = typeStyle[ev.type] || typeStyle.season;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:${s.bg};border:1.5px solid ${s.border};border-radius:10px;margin-bottom:5px">
+            <span style="font-size:18px">${s.icon}</span>
+            <div>
+              <div style="font-size:14px;font-weight:800;color:var(--text1)">${ev.label}</div>
+              ${ev.note?`<div style="font-size:11px;color:var(--text2);margin-top:1px">${ev.note}</div>`:''}
+            </div>
+          </div>`;
+        }).join('') : `<div style="padding:8px 12px;font-size:15px;color:var(--text3);font-weight:600">ㅡ</div>`}
+      </div>
+    `;
+  };
+
+  let html = '<div style="background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:14px 16px;box-shadow:0 2px 12px rgba(0,0,0,.05)">';
+  html += '<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">📅 주요 일정</div>';
+  html += renderItems(todayEvents,    '오늘', '#e03131', todayStr);
+  html += renderItems(tomorrowEvents, '내일', '#1971c2', tomorrowStr);
+  html += renderItems(dayAfterEvents, '모레', '#6741d9', dayAfterStr);
+  html += '</div>';
+
+  const banner = document.getElementById('eventBanner');
+  banner.innerHTML = html;
+  banner.style.display = 'block';
+}
+const SUBJ_COLORS = [
+  '#e03131', // 빨강
+  '#f76707', // 주황
+  '#f59f00', // 노랑
+  '#2f9e44', // 초록
+  '#0c8599', // 청록
+  '#1971c2', // 파랑
+  '#6741d9', // 남색
+  '#9c36b5', // 보라
+  '#c2255c', // 핑크
+  '#087f5b', // 짙은 청록
+  '#e67700', // 진한 주황
+  '#364fc7', // 진한 파랑
+  '#5c940d', // 연두
+  '#a61e4d', // 자홍
+  '#1864ab', // 하늘
+];
+function subjColor(name) {
+  if(!name) return '#9198b4';
+  let h = 0;
+  for(let i=0;i<name.length;i++) h = name.charCodeAt(i) + ((h<<5)-h);
+  return SUBJ_COLORS[Math.abs(h) % SUBJ_COLORS.length];
+}
+const defTT={ '월':['국어','국어','수학','즐거운생활','창체'], '화':['국어','수학','바른생활','즐거운생활',''], '수':['수학','국어','슬기로운생활','즐거운생활',''], '목':['국어','수학','바른생활','즐거운생활','창체'], '금':['수학','국어','슬기로운생활','즐거운생활',''] };
+let tt={};
+
+async function loadTimetable(){
+  try {
+    let d;
+    if(isLocal) {
+      const r = await fetch(`${API}/api/timetable`);
+      d = await r.json();
+    } else {
+      const gist = await fetchData('', 'data.json');
+      d = gist.timetable || {};
+    }
+    tt = Object.keys(d).length > 0 ? d : JSON.parse(JSON.stringify(defTT));
+  } catch(e) {
+    tt = JSON.parse(JSON.stringify(defTT));
+  }
+  renderTT();
+}
+
+async function saveTimetable(e){
+  const b = e.target;
+  try {
+    await fetch(`${API}/api/timetable`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(tt)
+    });
+    renderTT();
+    b.textContent='✅ 저장됨';
+  } catch(err) {
+    b.textContent='❌ 실패';
+  }
+  setTimeout(()=>b.textContent='저장', 1500);
+}
+function renderTT(){
+  const n=new Date(); const di=n.getDay();
+  const today=di>=1&&di<=5?DAYS[di-1]:null;
+  const g=document.getElementById('ttGrid'); g.innerHTML='';
+  DAYS.forEach(day=>{
+    const col=document.createElement('div');
+    const hd=document.createElement('div');
+    hd.className='day-hd'+(day===today?' today':'');
+    hd.textContent=day; col.appendChild(hd);
+    for(let p=0;p<PERIODS;p++){
+      const subj=(tt[day]||[])[p]||'';
+      const color=subjColor(subj);
+      // 배경색: 텍스트 색의 10% 투명도
+      const bgColor=subj?color+'18':'transparent';
+      const cell=document.createElement('div');
+      cell.className=`pcell${day===today?' today-col':''}`;
+      cell.style.borderColor=subj?color+'44':'';
+      cell.style.background=subj?bgColor:'';
+      cell.innerHTML=`<div class="pnum">${p+1}교시</div><div class="psubj${subj?'':' empty'}" style="${subj?`color:${color};font-weight:900`:''}"> ${subj||'입력'}</div>`;
+      cell.addEventListener('click',()=>editCell(cell,day,p));
+      col.appendChild(cell);
+    }
+    g.appendChild(col);
+  });
+}
+function editCell(cell,day,p){
+  if(cell.querySelector('input')) return;
+  cell.classList.add('editing');
+  const subj=(tt[day]||[])[p]||'';
+  cell.innerHTML=`<div class="pnum">${p+1}교시</div><input class="pinput" value="${subj}" maxlength="8"/>`;
+  const inp=cell.querySelector('input'); inp.focus(); inp.select();
+  function save(){ if(!tt[day]) tt[day]=[]; tt[day][p]=inp.value.trim();
+    fetch(`${API}/api/timetable`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(tt)});
+    renderTT(); }
+  inp.addEventListener('blur',save);
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') inp.blur(); if(e.key==='Escape') renderTT(); });
+}
+
+// ── 하이클래스 ──
+let hcEditing=false;
+async function loadHiclass(){
+  try{
+    // 로컬 우선, 외부는 Gist에서
+    if(isLocal) {
+      // 1. summary 캐시 확인
+      const sr = await fetch(`${API}/api/summary`);
+      const cache = await sr.json();
+      if(cache && cache.updated_at && cache.summary) {
+        document.getElementById('hcTime').textContent=`${cache.updated_at} 자동수집 (캐시)`;
+        document.getElementById('hcDisplay').innerHTML = renderAiSummary(cache.summary, cache.summary.posts||[]);
+        return;
+      }
+      // 2. hiclass_data.json 직접 읽기
+      const r = await fetch('./hiclass_data.json?t='+Date.now());
+      if(r.ok){
+        const d = await r.json();
+        if(d&&(d.posts?.length>0||d.error)){ renderHcJson(d); return; }
+      }
+    } else {
+      // Gist에서 data.json 읽기
+      const gist = await fetchData('', 'data.json');
+      const cache = gist.summary;
+      if(cache && cache.updated_at && cache.summary) {
+        document.getElementById('hcTime').textContent=`${cache.updated_at} 자동수집 (캐시)`;
+        document.getElementById('hcDisplay').innerHTML = renderAiSummary(cache.summary, cache.summary.posts||[]);
+        return;
+      }
+      const hc = gist.hiclass;
+      if(hc && hc.posts?.length) { renderHcJson(hc); return; }
+    }
+  }catch(e){}
+  const s=localStorage.getItem('dash_hc');
+  if(s){ renderHcManual(s,localStorage.getItem('dash_hc_time')); return; }
+  document.getElementById('hcDisplay').innerHTML='<div class="hc-empty">📋 스크래퍼 실행 후 자동 표시됩니다</div>';
+}
+
+async function renderHcJson(data){
+  document.getElementById('hcTime').textContent=`${data.updated_at} 자동수집`;
+  if(data.error){ document.getElementById('hcDisplay').innerHTML=`<div class="hc-empty">⚠️ 수집 오류: ${esc(data.error)}</div>`; return; }
+  if(!data.posts?.length){ document.getElementById('hcDisplay').innerHTML='<div class="hc-empty">📭 수집된 알림장이 없습니다</div>'; return; }
+
+  // ── 캐시 확인: 서버의 hiclass_summary.json 사용 ──
+  try {
+    const cr = await fetch(`${API}/api/summary`);
+    const cache = await cr.json();
+    if(cache.updated_at === data.updated_at && cache.summary) {
+      document.getElementById('hcDisplay').innerHTML = renderAiSummary(cache.summary, data.posts);
+      document.getElementById('hcTime').textContent = `${data.updated_at} 자동수집 (캐시)`;
+      return;
+    }
+  } catch(e) {}
+
+  // 캐시 미스: AI 호출
+  document.getElementById('hcDisplay').innerHTML=`<div class="hc-empty">🤖 AI가 알림장을 정리하는 중...</div>`;
+
+  try {
+    const allContent = data.posts.map(p => `[${p.date}]\n${p.content}`).join('\n\n---\n\n');
+    const aiResult = await summarizeWithAI(allContent);
+    if(aiResult) {
+      // 서버에 캐시 저장
+      await fetch(`${API}/api/summary`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ updated_at: data.updated_at, summary: aiResult })
+      });
+      document.getElementById('hcDisplay').innerHTML = renderAiSummary(aiResult, data.posts);
+      return;
+    }
+  } catch(e) {}
+
+  // AI 실패 시 원문 표시
+  document.getElementById('hcDisplay').innerHTML=`<div class="hc-posts">${data.posts.map(post=>`
+    <div class="hc-post">
+      ${post.date?`<div class="hc-post-date">📅 ${esc(post.date)}</div>`:''}
+      <div class="hc-post-body">${esc(post.content)}</div>
+    </div>`).join('')}</div>`;
+}
+
+async function summarizeWithAI(content) {
+  const res = await fetch('http://localhost:8081/api/summarize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  });
+  if(!res.ok) throw new Error('API 오류');
+  return await res.json();
+}
+
+function renderAiSummary(aiData, rawPosts) {
+  const catIcons = { '준비물':'🎒', '숙제':'📝', '중요공지':'⚠️', '기타':'📌' };
+  const today = new Date();
+  const todayStr = `${today.getMonth()+1}월 ${today.getDate()}일`;
+
+  const postsHtml = (aiData.posts || []).map((post, idx) => {
+    // 날짜 문자열 포함 여부 OR 첫 번째 게시물을 오늘로 처리
+    const isToday = idx === 0 || (post.date && post.date.includes(todayStr));
+    const hasItems = post.items && Object.values(post.items).some(v => v?.length > 0);
+    const itemsHtml = hasItems ? Object.entries(post.items)
+      .filter(([,v]) => v?.length > 0)
+      .map(([cat, items]) => `
+        <div class="ai-section">
+          <div class="ai-section-title">${catIcons[cat]||'•'} ${cat}</div>
+          <ul class="ai-list">${items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+        </div>`).join('') : '';
+
+    const rawContent = rawPosts[idx]?.content || '';
+
+    // 오늘 알림장: 펼침 / 이전 날짜: 제목만 보이고 접힘
+    if(isToday) {
+      return `
+        <div class="hc-post" style="border-left:3px solid var(--blue)">
+          <div class="hc-post-date">📅 ${esc(post.date)} <span style="font-size:12px;color:var(--blue);font-weight:700">오늘</span></div>
+          ${post.summary?`<div class="ai-summary">💡 ${esc(post.summary)}</div>`:''}
+          ${itemsHtml}
+          <div class="raw-toggle" onclick="toggleRaw(this)">
+            <span>원문 보기 ▾</span>
+            <div class="raw-content" style="display:none">${esc(rawContent)}</div>
+          </div>
+        </div>`;
+    } else {
+      return `
+        <div class="hc-post" style="cursor:pointer" onclick="togglePost(this)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="hc-post-date" style="margin-bottom:0">📅 ${esc(post.date)}</div>
+            <span style="font-size:12px;color:var(--text3)">▾ 펼치기</span>
+          </div>
+          <div class="post-body" style="display:none;margin-top:10px">
+            ${post.summary?`<div class="ai-summary">💡 ${esc(post.summary)}</div>`:''}
+            ${itemsHtml}
+            <div class="raw-toggle" onclick="event.stopPropagation();toggleRaw(this)">
+              <span>원문 보기 ▾</span>
+              <div class="raw-content" style="display:none">${esc(rawContent)}</div>
+            </div>
+          </div>
+        </div>`;
+    }
+  }).join('');
+
+  return `<div class="hc-posts">${postsHtml}</div>`;
+}
+
+function togglePost(el) {
+  const body = el.querySelector('.post-body');
+  const arrow = el.querySelector('span:last-child');
+  if(body.style.display === 'none') {
+    body.style.display = 'block';
+    arrow.textContent = '▴ 접기';
+  } else {
+    body.style.display = 'none';
+    arrow.textContent = '▾ 펼치기';
+  }
+}
+
+function toggleRaw(el) {
+  const content = el.querySelector('.raw-content');
+  const span = el.querySelector('span');
+  if(content.style.display === 'none') {
+    content.style.display = 'block';
+    span.textContent = '원문 닫기 ▴';
+  } else {
+    content.style.display = 'none';
+    span.textContent = '원문 보기 ▾';
+  }
+}
+function renderHcManual(content,time){
+  document.getElementById('hcDisplay').innerHTML=`<div class="hc-post"><div class="hc-post-body">${esc(content)}</div></div>`;
+  if(time) document.getElementById('hcTime').textContent=time+' (수동)';
+}
+function toggleEdit(){
+  if(hcEditing) return;
+  hcEditing=true;
+  const saved=localStorage.getItem('dash_hc')||'';
+  document.getElementById('hcDisplay').innerHTML=`<textarea class="hc-textarea" id="hcTA" placeholder="하이클래스 알림장 내용을 붙여넣으세요...">${saved}</textarea>`;
+  document.getElementById('hcActions').innerHTML=`<button class="btn btn-primary" onclick="saveHc()">💾 저장</button><button class="btn btn-ghost" onclick="cancelEdit()">취소</button>`;
+  document.getElementById('hcTA').focus();
+}
+function saveHc(){
+  const v=document.getElementById('hcTA')?.value||'';
+  const n=new Date(); const p=x=>String(x).padStart(2,'0');
+  const t=`${n.getMonth()+1}/${n.getDate()} ${p(n.getHours())}:${p(n.getMinutes())}`;
+  localStorage.setItem('dash_hc',v); localStorage.setItem('dash_hc_time',t);
+  hcEditing=false; resetHcActions(); renderHcManual(v,t);
+}
+function cancelEdit(){ hcEditing=false; resetHcActions(); loadHiclass(); }
+function resetHcActions(){
+  document.getElementById('hcActions').innerHTML=`
+    <button class="btn btn-outline" onclick="openHiclass()">🔗 하이클래스 열기</button>
+    <button class="btn btn-ghost" onclick="toggleEdit()">✏️ 수동 입력</button>
+    <button class="btn btn-ghost" onclick="clearHc()">🗑 지우기</button>`;
+}
+function clearHc(){
+  if(!confirm('알림장 내용을 지울까요?')) return;
+  localStorage.removeItem('dash_hc'); localStorage.removeItem('dash_hc_time');
+  document.getElementById('hcTime').textContent='미업데이트';
+  loadHiclass();
+}
+function openHiclass(){ window.open('https://www.hiclass.net','_blank'); }
+function esc(s){ if(!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+
+// ── 자동 갱신 30분 ──
+setInterval(()=>{ if(getKey()){ loadWeather(); loadAir(); } loadHiclass(); }, 30*60*1000);
+</script>
+</body>
+</html>
