@@ -438,6 +438,7 @@
       <div style="font-size:14px;color:var(--text3)">불러오는 중...</div>
     </div>
   </div>
+  <div id="tomorrowContent" style="margin-top:10px"></div>
 </div>
 
 <!-- 오늘/내일 일정 배너 -->
@@ -667,6 +668,42 @@ function renderWeather(data){
         <div style="font-size:14px;font-weight:700;color:white">${sunset}</div>
         <div style="font-size:10px;opacity:.6;margin-top:2px">일몰</div>
       </div>
+    </div>
+  `;
+  renderTomorrow(data.tomorrow, data.tomorrow_tip);
+}
+
+// ── 내일 날씨 미리보기 + AI 준비물 팁 ──
+function renderTomorrow(tomorrow, tip){
+  const el = document.getElementById('tomorrowContent');
+  if(!el) return;
+  if(!tomorrow || Object.keys(tomorrow).length===0){
+    el.innerHTML = '';
+    return;
+  }
+  function wIcon(pop){
+    if(pop>=60) return '🌧';
+    if(pop>=30) return '🌦';
+    return '☀️';
+  }
+  const icon = wIcon(tomorrow.pop ?? 0);
+  el.innerHTML = `
+    <div style="background:var(--bg);border-radius:12px;padding:12px 14px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3)">🔮 내일 날씨 미리보기</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:${tip?'10px':'0'}">
+        <span style="font-size:26px">${icon}</span>
+        <div style="display:flex;gap:10px;font-size:14px;color:var(--text1);font-weight:700">
+          <span style="color:#e8590c">↑${tomorrow.tMax ?? '--'}°</span>
+          <span style="color:#1971c2">↓${tomorrow.tMin ?? '--'}°</span>
+        </div>
+        <span style="font-size:13px;color:var(--text2)">🌂 강수 ${tomorrow.pop ?? '--'}%</span>
+        <span style="font-size:13px;color:var(--text2)">💧 습도 ${tomorrow.humidity ?? '--'}%</span>
+        <span style="font-size:13px;color:var(--text2)">💨 풍속 ${tomorrow.wind ?? '--'}km/h</span>
+        <span style="font-size:13px;color:var(--text2)">🌅 ${tomorrow.sunrise ?? '--'} · 🌇 ${tomorrow.sunset ?? '--'}</span>
+      </div>
+      ${tip ? `<div style="background:#fff9db;border:1px solid #ffe066;border-radius:10px;padding:9px 12px;font-size:13px;color:#5c4a00;line-height:1.5">🤖 ${tip}</div>` : ''}
     </div>
   `;
 }
